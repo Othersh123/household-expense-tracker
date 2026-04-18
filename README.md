@@ -2,8 +2,6 @@
 
 A mobile-first Progressive Web App that helps couples track shared household expenses — built with React, Google Sheets, and Gemini Flash vision API.
 
-**Live app:** [expense-tracker-six-mu-10.vercel.app](https://expense-tracker-six-mu-10.vercel.app)
-
 ---
 
 ## The Problem
@@ -140,6 +138,3 @@ household-expense-tracker/
 
 ---
 
-## License
-
-MIT
