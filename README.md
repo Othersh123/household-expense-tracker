@@ -16,7 +16,19 @@ A PWA that makes logging a transaction take under 30 seconds — by letting AI d
 
 ## What I Built
 
+<div align="center">
+  <img src="screenshots/dashboard.png" width="250" alt="Dashboard"/>
+  &nbsp;&nbsp;
+  <img src="screenshots/manual.png" width="250" alt="Manual Entry"/>
+  &nbsp;&nbsp;
+  <img src="screenshots/transactions.png" width="250" alt="Transactions"/>
+</div>
 
+<div align="center">
+  <img src="screenshots/sms.png" width="250" alt="SMS Parsing"/>
+  &nbsp;&nbsp;
+  <img src="screenshots/screenshot.png" width="250" alt="Screenshot Parsing"/>
+</div>
 
 ### Three ways to log a transaction
 
