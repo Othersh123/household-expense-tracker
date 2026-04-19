@@ -15,11 +15,6 @@ A PWA that makes logging a transaction take under 30 seconds — by letting AI d
 ---
 
 ## What I Built
-<img width="555" height="856" alt="Screenshot 2026-04-19 171647" src="https://github.com/user-attachments/assets/d1504771-c257-4939-aa17-1b7a0a41aeb2" />
-<img width="555" height="864" alt="Screenshot 2026-04-19 171755" src="https://github.com/user-attachments/assets/ccf80230-266e-475d-a847-117e0d0a9d8d" />
-<img width="556" height="861" alt="Screenshot 2026-04-19 171724" src="https://github.com/user-attachments/assets/e292949b-26bb-4161-8887-2977e2fb13eb" />
-<img width="558" height="865" alt="Screenshot 2026-04-19 171707" src="https://github.com/user-attachments/assets/915b104d-8493-46dd-90ea-1f894e220ef7" />
-<img width="557" height="860" alt="Screenshot 2026-04-19 171332" src="https://github.com/user-attachments/assets/80b5eb44-51f8-4ae3-a430-abb4ec6dbebb" />
 
 
 
