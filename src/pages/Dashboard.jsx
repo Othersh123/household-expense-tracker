@@ -5,8 +5,10 @@ import SummaryCards from '../components/Dashboard/SummaryCards'
 import CategoryChart from '../components/Dashboard/CategoryChart'
 import PersonBreakdown from '../components/Dashboard/PersonBreakdown'
 import RecentTransactions from '../components/Dashboard/RecentTransactions'
+import SettlementCard from '../components/Dashboard/SettlementCard'
 import FilterSheet, { FilterSelect } from '../components/FilterSheet'
 import { usePersons } from '../context/PersonsContext'
+import { useAuth } from '../context/AuthContext'
 
 const PAYMENT_METHODS = ['All', 'UPI', 'Credit Card', 'Debit Card', 'Cash']
 
@@ -32,6 +34,7 @@ function parseRowDate(str) {
 
 export default function Dashboard() {
   const { persons } = usePersons()
+  const { revokeAuth } = useAuth()
   const [view, setView] = useState('month')
   const [rows, setRows] = useState([])
   const [loading, setLoading] = useState(true)
@@ -96,7 +99,7 @@ export default function Dashboard() {
   const cutoff = view === 'week' ? startOfWeek(now, { weekStartsOn: 1 }) : startOfMonth(now)
 
   const dateFiltered = useMemo(() =>
-    rows.filter((r) => { const d = parseRowDate(r.date); return d !== null && d >= cutoff }),
+    rows.filter((r) => { const d = parseRowDate(r.date); return d !== null && d >= cutoff && String(r.deleted).toLowerCase() !== 'true' }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [rows, view]
   )
@@ -121,16 +124,64 @@ export default function Dashboard() {
     )]
   }, [dateFiltered, draftPayment])
 
+  // Settlement balance — positive means person is owed money, negative means they owe
+  const settlement = useMemo(() => {
+    if (persons.length < 2) return null
+    const balance = Object.fromEntries(persons.map((p) => [p, 0]))
+
+    filtered.filter((r) => r.splitType === 'Shared' && r.splitDetails).forEach((r) => {
+      const payer = r.person
+      const amount = parseFloat(r.amount) || 0
+      try {
+        const details = JSON.parse(r.splitDetails)
+        persons.forEach((p) => {
+          const owed = parseFloat(details[p] || 0)
+          const paid = p === payer ? amount : 0
+          balance[p] += paid - owed
+        })
+      } catch {}
+    })
+
+    filtered.filter((r) => r.splitType === 'Settlement').forEach((r) => {
+      const payer = r.person
+      const receiver = persons.find((p) => p !== payer)
+      const amount = parseFloat(r.amount) || 0
+      if (receiver) {
+        balance[payer] += amount
+        balance[receiver] -= amount
+      }
+    })
+
+    const net = balance[persons[0]]
+    if (Math.abs(net) < 0.01) return { settled: true }
+    if (net > 0) return { debtor: persons[1], creditor: persons[0], amount: Math.round(net * 100) / 100 }
+    return { debtor: persons[0], creditor: persons[1], amount: Math.round(Math.abs(net) * 100) / 100 }
+  }, [filtered, persons])
+
   // --- Aggregations ---
 
-  const totalSpent = filtered.reduce((s, r) => s + (parseFloat(r.amount) || 0), 0)
+  // Exclude settlement entries from spending calculations
+  const spendingRows = filtered.filter((r) => r.splitType !== 'Settlement')
+
+  const totalSpent = spendingRows.reduce((s, r) => s + (parseFloat(r.amount) || 0), 0)
 
   const byCat = {}
-  filtered.forEach((r) => { byCat[r.category] = (byCat[r.category] || 0) + (parseFloat(r.amount) || 0) })
+  spendingRows.forEach((r) => { byCat[r.category] = (byCat[r.category] || 0) + (parseFloat(r.amount) || 0) })
 
   const byPerson = Object.fromEntries(persons.map((p) => [p, 0]))
-  filtered.forEach((r) => {
-    if (r.person) byPerson[r.person] = (byPerson[r.person] || 0) + (parseFloat(r.amount) || 0)
+  spendingRows.forEach((r) => {
+    if (r.splitType === 'Shared' && r.splitDetails) {
+      try {
+        const details = JSON.parse(r.splitDetails)
+        Object.entries(details).forEach(([person, amt]) => {
+          if (person in byPerson) byPerson[person] = (byPerson[person] || 0) + (parseFloat(amt) || 0)
+        })
+      } catch {
+        if (r.person) byPerson[r.person] = (byPerson[r.person] || 0) + (parseFloat(r.amount) || 0)
+      }
+    } else {
+      if (r.person) byPerson[r.person] = (byPerson[r.person] || 0) + (parseFloat(r.amount) || 0)
+    }
   })
 
   const recentRows = [...filtered].sort((a, b) => {
@@ -198,9 +249,21 @@ export default function Dashboard() {
       )}
 
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl px-4 py-3">
-          {error}
-        </div>
+        error.includes('invalid_grant') ? (
+          <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-4 space-y-3">
+            <p className="text-sm font-medium text-amber-800">Your Google connection has expired. Please reconnect.</p>
+            <button
+              onClick={revokeAuth}
+              className="w-full bg-primary-600 hover:bg-primary-700 text-white text-sm font-semibold py-2.5 rounded-lg transition-colors"
+            >
+              Reconnect Google Sheets
+            </button>
+          </div>
+        ) : (
+          <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl px-4 py-3">
+            {error}
+          </div>
+        )
       )}
 
       {loading && rows.length === 0 ? (
@@ -212,6 +275,7 @@ export default function Dashboard() {
           <SummaryCards total={totalSpent} view={view} count={filtered.length} />
           <CategoryChart data={byCat} />
           <PersonBreakdown data={byPerson} total={totalSpent} />
+          <SettlementCard settlement={settlement} onSettled={fetchData} />
           <RecentTransactions rows={recentRows} />
         </>
       )}

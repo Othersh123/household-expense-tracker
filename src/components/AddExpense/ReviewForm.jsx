@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { ArrowLeft, CheckCircle } from 'lucide-react'
 import { CATEGORIES, PAYMENT_METHODS } from '../../constants'
 import { usePersons } from '../../context/PersonsContext'
+import { useAuth } from '../../context/AuthContext'
 
 const SOURCE_BADGE = {
   Manual: 'bg-blue-100 text-blue-700',
@@ -34,6 +35,7 @@ function persistAccount(value) {
 
 export default function ReviewForm({ initial, source, onBack, onSuccess }) {
   const { persons } = usePersons()
+  const { revokeAuth } = useAuth()
   const [form, setForm] = useState({ ...initial })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -58,7 +60,10 @@ export default function ReviewForm({ initial, source, onBack, onSuccess }) {
       form.account,
       source,
       form.notes,
-      new Date().toISOString(),
+      new Date().toISOString(), // J: Logged At
+      '',                        // K: Deleted (blank for new rows)
+      form.txType || 'Personal', // L: Split Type
+      form.splitDetails || '',   // M: Split Details
     ]
 
     try {
@@ -78,6 +83,12 @@ export default function ReviewForm({ initial, source, onBack, onSuccess }) {
   }
 
   const accountOptions = getAccountOptions()
+
+  // Parse split summary for read-only display
+  let splitSummary = null
+  if (form.txType === 'Shared' && form.splitDetails) {
+    try { splitSummary = JSON.parse(form.splitDetails) } catch {}
+  }
 
   return (
     <div className="p-4">
@@ -147,10 +158,39 @@ export default function ReviewForm({ initial, source, onBack, onSuccess }) {
           <input type="text" value={form.notes} onChange={set('notes')} className={inp} placeholder="Optional" />
         </Field>
 
+        {/* Read-only split summary (set on the previous screen) */}
+        {splitSummary && (
+          <div className="bg-indigo-50 border border-indigo-100 rounded-xl px-4 py-3">
+            <p className="text-xs font-semibold text-indigo-500 uppercase tracking-wide mb-2">Shared split</p>
+            <div className="flex gap-6">
+              {Object.entries(splitSummary).map(([person, amt]) => (
+                <div key={person}>
+                  <p className="text-xs text-indigo-400">{person}</p>
+                  <p className="text-sm font-semibold text-indigo-800">
+                    ₹{parseFloat(amt).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {error && (
-          <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
-            {error}
-          </p>
+          error.includes('invalid_grant') ? (
+            <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-4 space-y-3">
+              <p className="text-sm font-medium text-amber-800">Your Google connection has expired. Please reconnect.</p>
+              <button
+                onClick={revokeAuth}
+                className="w-full bg-primary-600 hover:bg-primary-700 text-white text-sm font-semibold py-2.5 rounded-lg transition-colors"
+              >
+                Reconnect Google Sheets
+              </button>
+            </div>
+          ) : (
+            <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+              {error}
+            </p>
+          )
         )}
 
         <button

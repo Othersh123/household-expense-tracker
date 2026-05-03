@@ -8,6 +8,7 @@ export const CATEGORIES = [
   'Entertainment',
   'Health',
   'Other',
+  'Settlement',
 ]
 
 export const PAYMENT_METHODS = ['UPI', 'Credit Card', 'Debit Card', 'Cash']

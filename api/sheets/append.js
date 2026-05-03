@@ -17,7 +17,7 @@ export default async function handler(req, res) {
     }
 
     const sheetId = process.env.GOOGLE_SHEET_ID
-    const range = 'Sheet1!A:J'
+    const range = 'Sheet1!A:M'
     const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${encodeURIComponent(range)}:append?valueInputOption=USER_ENTERED`
 
     const response = await fetch(url, {
